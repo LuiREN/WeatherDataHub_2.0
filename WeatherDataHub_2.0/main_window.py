@@ -168,11 +168,15 @@ class MainWindow(QMainWindow):
                 "CSV Files (*.csv)"
             )
             if save_path:
-                self.preprocessed_data.to_csv(save_path, index=False)
-                self.info_label.setText(f"Предобработанные данные сохранены в {save_path}")
-                # После сохранения обновляем current_file и загружаем данные
-                self.current_file = save_path
-                self.load_data(save_path)
+                try:
+                    self.preprocessed_data.to_csv(save_path, index=False)
+                    self.info_label.setText(f"Предобработанные данные сохранены в {save_path}")
+                    # После сохранения обновляем current_file и загружаем данные
+                    self.current_file = save_path
+                    self.load_data(save_path)
+                except Exception as e:
+                    self.info_label.setText(f"Не удалось сохранить данные: {str(e)}")
+                    self.current_file = None
 
     def load_data(self, data: Union[str, pd.DataFrame]) -> None:
         """Загружает данные в таблицу предварительного просмотра."""
