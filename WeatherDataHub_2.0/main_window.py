@@ -6,7 +6,7 @@ import pandas as pd
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout,
     QWidget, QFileDialog, QLabel, QFrame, QProgressBar, QMessageBox,
-    QTableWidgetItem, QLineEdit
+    QTableWidgetItem, QLineEdit,QTabWidget
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -16,6 +16,8 @@ from split_csv import split_csv, split_by_year, split_by_week
 from optimized_table import OptimizedTableWidget
 from annotation import create_annotation_file, read_annotation_file
 from date_widget import DateDataWidget
+from data_analysis import DataAnalysisTab
+
 
 
 class ScraperThread(QThread):
@@ -48,17 +50,28 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("WeatherDataHub")
         self.setGeometry(100, 100, 1200, 800)
 
-        central_widget = QWidget()
+        # Создаем виджет с вкладками
+        self.tab_widget = QTabWidget()
+        
+        # Создаем вкладку с основным функционалом
+        self.main_tab = QWidget()
         main_layout = QHBoxLayout()
-
+        
         left_panel = self.create_left_panel()
         right_panel = self.create_right_panel()
-
+        
         main_layout.addWidget(left_panel)
         main_layout.addWidget(right_panel)
-
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
+        self.main_tab.setLayout(main_layout)
+        
+        # Создаем вкладку анализа данных
+        self.analysis_tab = DataAnalysisTab()
+        
+        # Добавляем вкладки
+        self.tab_widget.addTab(self.main_tab, "Основные операции")
+        self.tab_widget.addTab(self.analysis_tab, "Анализ данных")
+        
+        self.setCentralWidget(self.tab_widget)
 
     def create_left_panel(self) -> QWidget:
         """Создает левую панель с кнопками."""
@@ -125,10 +138,14 @@ class MainWindow(QMainWindow):
 
     def select_file(self) -> None:
         """Открывает диалоговое окно для выбора CSV файла."""
-        file_path, _ = QFileDialog.getOpenFileName(self, "Выберите файл CSV", "", "CSV Files (*.csv)")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Выберите файл CSV", 
+            "", 
+            "CSV Files (*.csv)"
+        )
         if file_path:
             self.current_file = file_path
-            self.info_label.setText(f"Выбран файл: {self.current_file}")
             self.load_data(self.current_file)
 
     def preprocess_data(self) -> None:
@@ -143,25 +160,38 @@ class MainWindow(QMainWindow):
 
     def save_preprocessed_data(self) -> None:
         """Сохраняет предобработанные данные в CSV файл."""
-        save_path, _ = QFileDialog.getSaveFileName(self, "Сохранить предобработанные данные", "", "CSV Files (*.csv)")
-        if save_path and self.preprocessed_data is not None:
-            self.preprocessed_data.to_csv(save_path, index=False)
-            self.info_label.setText(f"Предобработанные данные сохранены в {save_path}")
+        if self.preprocessed_data is not None:
+            save_path, _ = QFileDialog.getSaveFileName(
+                self, 
+                "Сохранить предобработанные данные", 
+                "", 
+                "CSV Files (*.csv)"
+            )
+            if save_path:
+                self.preprocessed_data.to_csv(save_path, index=False)
+                self.info_label.setText(f"Предобработанные данные сохранены в {save_path}")
+                # После сохранения обновляем current_file и загружаем данные
+                self.current_file = save_path
+                self.load_data(save_path)
 
     def load_data(self, data: Union[str, pd.DataFrame]) -> None:
-        """Загружает данные в таблицу предварительного просмотра."""
         if isinstance(data, str):
             try:
                 df = pd.read_csv(data)
+                self.current_file = data
+                # Передаем и DataFrame, и путь к файлу
+                self.analysis_tab.load_data(df, data)
             except Exception as e:
                 self.info_label.setText(f"Ошибка при чтении файла: {str(e)}")
                 return
         elif isinstance(data, pd.DataFrame):
             df = data
+            # Передаем только DataFrame, так как файл не выбран
+            self.analysis_tab.load_data(df)
         else:
             self.info_label.setText("Неподдерживаемый тип данных")
             return
-
+    
         self.data_preview.load_data(df)
 
     def create_annotation(self) -> None:
@@ -206,7 +236,6 @@ class MainWindow(QMainWindow):
             data = df[df['Дата'] == input_date]
 
             if not data.empty:
-                # Загружаем данные в транспонированном виде
                 self.data_preview.load_data(data, transpose=True)
                 self.info_label.setText(f"Данные на {date_str}")
             else:

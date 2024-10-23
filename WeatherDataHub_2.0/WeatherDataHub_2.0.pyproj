@@ -23,6 +23,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="annotation.py" />
+    <Compile Include="data_analysis.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="data_preprocessing.py" />
     <Compile Include="data_retrieval.py" />
     <Compile Include="date_widget.py" />
