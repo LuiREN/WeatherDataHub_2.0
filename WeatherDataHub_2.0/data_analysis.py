@@ -708,15 +708,26 @@ class DataAnalysisTab(QWidget):
         self.plot_month_temp_btn.setEnabled(True)
     
         # Обновляем список годов в комбобоксе
-        if 'date' in df.columns:
-            dates = pd.to_datetime(df['date'])
-        else:
-            dates = pd.to_datetime(df['дата'])
-        years = sorted(dates.dt.year.unique())
-        self.year_combo.clear()
-        self.year_combo.addItems([str(year) for year in years])
-    
-        self.info_label.setText("Данные загружены. Выполните обработку данных для начала анализа.")
+        try:
+            # Проверяем наличие колонок с разными вариантами названия
+            if 'date' in df.columns:
+                dates = pd.to_datetime(df['date'])
+            elif 'дата' in df.columns:
+                dates = pd.to_datetime(df['дата'])
+            elif 'Дата' in df.columns:
+                dates = pd.to_datetime(df['Дата'])
+            else:
+                # Если нет нужной колонки, берем первую колонку как дату
+                dates = pd.to_datetime(df.iloc[:, 0])
+            
+            years = sorted(dates.dt.year.unique())
+            self.year_combo.clear()
+            self.year_combo.addItems([str(year) for year in years])
+        
+            self.info_label.setText("Данные загружены. Выполните обработку данных для начала анализа.")
+        except Exception as e:
+            print(f"Ошибка при обработке дат: {str(e)}")
+            self.info_label.setText("Ошибка при загрузке дат. Проверьте формат данных.")
 
 if __name__ == "__main__":
     print("Этот модуль является частью приложения WeatherDataHub")

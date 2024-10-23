@@ -175,24 +175,21 @@ class MainWindow(QMainWindow):
                 self.load_data(save_path)
 
     def load_data(self, data: Union[str, pd.DataFrame]) -> None:
+        """Загружает данные в таблицу предварительного просмотра."""
         if isinstance(data, str):
             try:
                 df = pd.read_csv(data)
-                self.current_file = data
-                # Передаем и DataFrame, и путь к файлу
-                self.analysis_tab.load_data(df, data)
             except Exception as e:
                 self.info_label.setText(f"Ошибка при чтении файла: {str(e)}")
                 return
         elif isinstance(data, pd.DataFrame):
             df = data
-            # Передаем только DataFrame, так как файл не выбран
-            self.analysis_tab.load_data(df)
         else:
             self.info_label.setText("Неподдерживаемый тип данных")
             return
-    
         self.data_preview.load_data(df)
+        # Добавляем загрузку данных во вкладку анализа
+        self.analysis_tab.load_data(df, data if isinstance(data, str) else None)
 
     def create_annotation(self) -> None:
         """Создает файл аннотации для текущего набора данных."""
