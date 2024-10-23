@@ -36,6 +36,9 @@
     <Compile Include="optimized_table.py" />
     <Compile Include="scraper.py" />
     <Compile Include="split_csv.py" />
+    <Compile Include="tests\test_data_analysis.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tests\test_main_window.py">
       <SubType>Code</SubType>
     </Compile>

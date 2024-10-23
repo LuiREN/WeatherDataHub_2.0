@@ -28,6 +28,11 @@ class StatsDialog(QDialog):
     def init_ui(self, stats_data: pd.DataFrame):
         """Инициализация интерфейса диалогового окна."""
         layout = QVBoxLayout()
+
+        # Проверяем данные
+        if not self.validate_data(stats_data):
+            self.reject()
+            return
         
         # Создаем таблицу для отображения статистики
         table = QTableWidget()
@@ -54,6 +59,18 @@ class StatsDialog(QDialog):
         layout.addWidget(table)
         self.setLayout(layout)
 
+    def validate_data(self, stats_data: pd.DataFrame) -> bool:
+        """Проверяет корректность данных для отображения в диалоге"""
+        if stats_data is None or stats_data.empty:
+            QMessageBox.warning(self, "Ошибка", "Нет данных для отображения")
+            return False
+    
+        if not any('temperature' in col.lower() for col in stats_data.columns):
+            QMessageBox.warning(self, "Ошибка", "Отсутствуют данные о температуре")
+            return False
+    
+        return True
+
 class DateFilterDialog(QDialog):
     """Диалоговое окно для отображения отфильтрованных по дате данных."""
     def __init__(self, filtered_data: pd.DataFrame, start_date: str, end_date: str, parent=None):
@@ -64,8 +81,15 @@ class DateFilterDialog(QDialog):
         self.init_ui(filtered_data)
 
     def init_ui(self, filtered_data: pd.DataFrame):
+        """Инициализация интерфейса диалогового окна."""
         layout = QVBoxLayout()
-        
+    
+        # Проверка данных
+        if filtered_data.empty:
+            QMessageBox.warning(self, "Предупреждение", "Нет данных для отображения")
+            self.reject()
+            return
+    
         # Создаем и настраиваем таблицу
         table = QTableWidget()
         table.setRowCount(len(filtered_data))
@@ -370,28 +394,40 @@ class DataAnalysisTab(QWidget):
 
     def show_temperature_stats(self):
         """Показывает статистику температуры."""
-        if self.df is None:
-            QMessageBox.warning(self, "Предупреждение", "Нет загруженных данных")
-            return
+        try:
+            if self.df is None:
+                QMessageBox.warning(self, "Предупреждение", "Нет загруженных данных")
+                return
 
-        # Получаем столбцы с температурой
-        temp_cols = [col for col in self.df.columns 
-                    if ('temperature' in col and 'fahrenheit' not in col)]
-        fahrenheit_cols = [col for col in self.df.columns 
-                         if ('temperature' in col and 'fahrenheit' in col)]
+            # Получаем столбцы с температурой
+            temp_cols = [col for col in self.df.columns 
+                        if ('temperature' in col.lower() and 'fahrenheit' not in col.lower())]
+            fahrenheit_cols = [col for col in self.df.columns 
+                             if ('temperature' in col.lower() and 'fahrenheit' in col.lower())]
 
-        # Собираем все температурные данные
-        temp_data = pd.concat([
-            self.df[temp_cols],      # Цельсий
-            self.df[fahrenheit_cols]  # Фаренгейт
-        ], axis=1)
+            if not temp_cols and not fahrenheit_cols:
+                QMessageBox.warning(self, "Предупреждение", "Нет данных о температуре")
+                return
 
-        # Вычисляем статистику
-        stats = temp_data.describe()
+            # Собираем все температурные данные
+            temp_data = pd.concat([
+                self.df[temp_cols] if temp_cols else pd.DataFrame(),      # Цельсий
+                self.df[fahrenheit_cols] if fahrenheit_cols else pd.DataFrame()  # Фаренгейт
+            ], axis=1)
 
-        # Создаем и показываем диалог со статистикой
-        dialog = StatsDialog(stats, self)
-        dialog.exec()
+            if temp_data.empty:
+                QMessageBox.warning(self, "Предупреждение", "Нет данных для анализа")
+                return
+
+            # Вычисляем статистику
+            stats = temp_data.describe()
+
+            # Создаем и показываем диалог со статистикой
+            dialog = StatsDialog(stats, self)
+            dialog.exec()
+
+        except Exception as e:
+            QMessageBox.warning(self, "Ошибка", f"Ошибка при анализе температуры: {str(e)}")
 
     def apply_filters(self):
         """Применяет фильтры к данным."""
