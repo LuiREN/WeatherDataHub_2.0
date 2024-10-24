@@ -1,57 +1,58 @@
 @echo off
+chcp 65001 > nul
 echo ============================================
 echo         WeatherDataHub Installer
 echo ============================================
 echo.
 
-:: Проверка Python
+:: Check Python installation
 python --version > nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python не установлен!
-    echo Пожалуйста, установите Python 3.11 или выше с сайта python.org
+    echo [ERROR] Python is not installed!
+    echo Please install Python 3.11 or higher from python.org
     pause
     exit /b 1
 )
 
-:: Проверка версии Python
+:: Check Python version
 python -c "import sys; assert sys.version_info >= (3,11)" > nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Требуется Python 3.11 или выше
-    echo Текущая версия:
+    echo [ERROR] Python 3.11 or higher is required
+    echo Current version:
     python --version
     pause
     exit /b 1
 )
 
-:: Создание виртуального окружения
-echo [INFO] Создание виртуального окружения...
+:: Create virtual environment
+echo [INFO] Creating virtual environment...
 python -m venv venv
 if errorlevel 1 (
-    echo [ERROR] Ошибка при создании виртуального окружения
+    echo [ERROR] Failed to create virtual environment
     pause
     exit /b 1
 )
 
-:: Активация виртуального окружения
-echo [INFO] Активация виртуального окружения...
+:: Activate virtual environment
+echo [INFO] Activating virtual environment...
 call venv\Scripts\activate.bat
 
-:: Обновление pip
-echo [INFO] Обновление pip...
+:: Upgrade pip
+echo [INFO] Upgrading pip...
 python -m pip install --upgrade pip
 
-:: Установка зависимостей
-echo [INFO] Установка зависимостей...
+:: Install requirements
+echo [INFO] Installing requirements...
 pip install -r requirements.txt
 if errorlevel 1 (
-    echo [ERROR] Ошибка при установке зависимостей
+    echo [ERROR] Failed to install requirements
     pause
     exit /b 1
 )
 
 echo.
 echo ============================================
-echo        Установка успешно завершена!
+echo        Installation completed!
 echo ============================================
-echo Теперь вы можете запустить приложение через run.bat
+echo You can now run the application using run.bat
 pause
