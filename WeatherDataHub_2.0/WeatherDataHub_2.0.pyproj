@@ -59,7 +59,16 @@
     <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="install.bat">
+      <SubType>Code</SubType>
+    </Content>
     <Content Include="requirements.txt">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="run.bat">
+      <SubType>Code</SubType>
+    </Content>
+    <Content Include="test.bat">
       <SubType>Code</SubType>
     </Content>
   </ItemGroup>
