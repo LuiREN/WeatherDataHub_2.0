@@ -732,38 +732,74 @@ class DataAnalysisTab(QWidget):
         """Загрузка данных для анализа."""
         if df is None:
             return
-    
+
         self.df = df.copy()
         self.current_file = file_path
         self.data_preview.load_data(df)
         self.process_data_btn.setEnabled(True)
-    
+
         # Активируем кнопки анализа температуры
         self.group_by_month_btn.setEnabled(True)
         self.plot_temp_btn.setEnabled(True)
         self.plot_month_temp_btn.setEnabled(True)
-    
+
         # Обновляем список годов в комбобоксе
         try:
-            # Проверяем наличие колонок с разными вариантами названия
-            if 'date' in df.columns:
-                dates = pd.to_datetime(df['date'])
-            elif 'дата' in df.columns:
-                dates = pd.to_datetime(df['дата'])
-            elif 'Дата' in df.columns:
-                dates = pd.to_datetime(df['Дата'])
-            else:
-                # Если нет нужной колонки, берем первую колонку как дату
-                dates = pd.to_datetime(df.iloc[:, 0])
-            
-            years = sorted(dates.dt.year.unique())
-            self.year_combo.clear()
-            self.year_combo.addItems([str(year) for year in years])
+            # Проверяем все возможные имена столбцов с датой
+            date_column = None
+            possible_date_columns = ['дата', 'date', 'Дата', 'Date']
         
-            self.info_label.setText("Данные загружены. Выполните обработку данных для начала анализа.")
+            # Ищем столбец с датой по имени
+            for col in possible_date_columns:
+                if col in df.columns:
+                    date_column = col
+                    break
+        
+            # Если не нашли по имени, проверяем первый столбец
+            if date_column is None:
+                # Пробуем преобразовать первый столбец в даты
+                try:
+                    test_dates = pd.to_datetime(df.iloc[:, 0], format='%Y-%m-%d', errors='coerce')
+                    if not test_dates.isna().all():  # Если есть хотя бы одна валидная дата
+                        date_column = df.columns[0]
+                except:
+                    pass
+
+            if date_column is not None:
+                # Преобразуем даты с обработкой ошибок
+                dates = pd.to_datetime(df[date_column], format='%Y-%m-%d', errors='coerce')
+                # Убираем некорректные даты
+                valid_dates = dates.dropna()
+            
+                if not valid_dates.empty:
+                    years = sorted(valid_dates.dt.year.unique())
+                    self.year_combo.clear()
+                    self.year_combo.addItems([str(year) for year in years])
+                
+                    self.info_label.setText(
+                        "Данные загружены. Выполните обработку данных для начала анализа."
+                    )
+                else:
+                    self.info_label.setText(
+                        "Предупреждение: не найдены корректные даты в данных."
+                    )
+            else:
+                self.info_label.setText(
+                    "Предупреждение: столбец с датой не найден или содержит некорректные данные."
+                )
+            
         except Exception as e:
             print(f"Ошибка при обработке дат: {str(e)}")
-            self.info_label.setText("Ошибка при загрузке дат. Проверьте формат данных.")
+            self.info_label.setText(
+                f"Ошибка при загрузке дат. {str(e)}"
+            )
+
+        # Добавляем информацию о файле
+        if file_path:
+            self.current_file = file_path
+            self.info_label.setText(
+                f"{self.info_label.text()}\nТекущий файл: {os.path.basename(file_path)}"
+            )
 
 if __name__ == "__main__":
     print("Этот модуль является частью приложения WeatherDataHub")
