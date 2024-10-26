@@ -315,11 +315,20 @@ class TestWeatherDataHub(unittest.TestCase):
         self.assertEqual(button.width(), 220)
 
     def test_load_styles(self):
-        """Тест загрузки стилей"""
-        with patch('builtins.open', create=True) as mock_open:
-            mock_open.return_value.__enter__.return_value.read.return_value = "QMainWindow { background: white; }"
-            self.window.load_styles()
-            mock_open.assert_called_with('styles.qss', 'r')
+            """Тест загрузки стилей"""
+            with patch('main_window.get_styles') as mock_get_styles:  # Изменён путь для патча
+                # Подготавливаем тестовые стили
+                test_styles = "QMainWindow { background: white; }"
+                mock_get_styles.return_value = test_styles
+            
+                # Загружаем стили
+                self.window.load_styles()
+            
+                # Проверяем, что функция get_styles была вызвана
+                mock_get_styles.assert_called_once()
+            
+                # Проверяем, что стили были установлены
+                self.assertEqual(self.window.styleSheet(), test_styles)
 
     @patch('PyQt6.QtWidgets.QMessageBox.warning')
     def test_invalid_month_scraper(self, mock_warning):

@@ -172,10 +172,31 @@ class DataAnalysisTab(QWidget):
         filter_layout = QVBoxLayout()
 
         # Фильтр по температуре
-        temp_filter_label = QLabel("Минимальная температура (°C):")
-        self.temp_filter = QLineEdit()
+        temp_filter_label = QLabel("Фильтр по температуре (°C):")
         filter_layout.addWidget(temp_filter_label)
-        filter_layout.addWidget(self.temp_filter)
+
+        # Создаем горизонтальный layout для полей ввода температуры
+        temp_fields_layout = QHBoxLayout()
+
+        # Добавляем поле для дневной температуры
+        day_temp_layout = QVBoxLayout()
+        day_temp_label = QLabel("День:")
+        self.temp_filter = QLineEdit()
+        self.temp_filter.setFixedWidth(80)
+        day_temp_layout.addWidget(day_temp_label)
+        day_temp_layout.addWidget(self.temp_filter)
+        temp_fields_layout.addLayout(day_temp_layout)
+
+        # Добавляем поле для вечерней температуры
+        evening_temp_layout = QVBoxLayout()
+        evening_temp_label = QLabel("Вечер:")
+        self.temp_filter_evening = QLineEdit()
+        self.temp_filter_evening.setFixedWidth(80)
+        evening_temp_layout.addWidget(evening_temp_label)
+        evening_temp_layout.addWidget(self.temp_filter_evening)
+        temp_fields_layout.addLayout(evening_temp_layout)
+
+        filter_layout.addLayout(temp_fields_layout)
 
         # Фильтры по датам
         date_label = QLabel("Период:")
@@ -436,41 +457,28 @@ class DataAnalysisTab(QWidget):
 
         filtered_df = self.df.copy()
 
-        # Применяем фильтр температуры
+        # Применяем фильтр дневной температуры
         if self.temp_filter.text():
             try:
                 min_temp = float(self.temp_filter.text())
                 if 'temperature_day' in filtered_df.columns:
                     filtered_df = filtered_df[filtered_df['temperature_day'] >= min_temp]
-                
-                    # Убеждаемся, что даты отображаются без времени
-                    filtered_df['date'] = pd.to_datetime(filtered_df['date']).dt.date
-                
-                    # Создаем директорию для отфильтрованных данных
-                    filtered_dir = 'filtered_data'
-                    if not os.path.exists(filtered_dir):
-                        os.makedirs(filtered_dir)
-                
-                    # Сохраняем отфильтрованные данные
-                    base_name = os.path.splitext(os.path.basename(self.current_file))[0] if self.current_file else "data"
-                    output_file = os.path.join(filtered_dir, f"{base_name}_temp_{min_temp}.csv")
-                
-                    # Преобразуем даты в строки перед сохранением
-                    save_df = filtered_df.copy()
-                    save_df['date'] = save_df['date'].astype(str)
-                    save_df.to_csv(output_file, index=False)
-                
-                    QMessageBox.information(
-                        self,
-                        "Фильтрация по температуре",
-                        f"Отфильтрованные данные сохранены в:\n{output_file}"
-                    )
-            
                 elif 'температура_(день)' in filtered_df.columns:
                     filtered_df = filtered_df[filtered_df['температура_(день)'] >= min_temp]
-                    filtered_df['дата'] = pd.to_datetime(filtered_df['дата']).dt.date
             except ValueError:
-                QMessageBox.warning(self, "Ошибка", "Некорректное значение температуры")
+                QMessageBox.warning(self, "Ошибка", "Некорректное значение дневной температуры")
+                return
+
+        # Применяем фильтр вечерней температуры
+        if self.temp_filter_evening.text():
+            try:
+                min_temp_evening = float(self.temp_filter_evening.text())
+                if 'temperature_evening' in filtered_df.columns:
+                    filtered_df = filtered_df[filtered_df['temperature_evening'] >= min_temp_evening]
+                elif 'температура_(вечер)' in filtered_df.columns:
+                    filtered_df = filtered_df[filtered_df['температура_(вечер)'] >= min_temp_evening]
+            except ValueError:
+                QMessageBox.warning(self, "Ошибка", "Некорректное значение вечерней температуры")
                 return
 
         # Применяем фильтр дат
@@ -479,27 +487,51 @@ class DataAnalysisTab(QWidget):
                 start = pd.to_datetime(self.start_date.text())
                 end = pd.to_datetime(self.end_date.text())
             
-                # Преобразуем столбец даты, если он еще не в формате datetime
                 date_col = 'date' if 'date' in filtered_df.columns else 'дата'
                 if filtered_df[date_col].dtype != 'datetime64[ns]':
                     filtered_df[date_col] = pd.to_datetime(filtered_df[date_col])
             
-                # Применяем фильтр и преобразуем даты
                 filtered_df = filtered_df[
                     (filtered_df[date_col].dt.date >= start.date()) & 
                     (filtered_df[date_col].dt.date <= end.date())
                 ]
                 filtered_df[date_col] = filtered_df[date_col].dt.date
             
-                # Активируем кнопку показа отфильтрованных по дате данных
                 self.show_date_filter_btn.setEnabled(True)
-            
             except ValueError:
                 QMessageBox.warning(self, "Ошибка", "Некорректный формат даты. Используйте YYYY-MM-DD")
                 return
-            except Exception as e:
-                QMessageBox.warning(self, "Ошибка", f"Ошибка при фильтрации дат: {str(e)}")
-                return
+
+        # Формируем имя файла с учетом всех фильтров
+        if self.temp_filter.text() or self.temp_filter_evening.text():
+            # Создаем директорию для отфильтрованных данных
+            filtered_dir = 'filtered_data'
+            if not os.path.exists(filtered_dir):
+                os.makedirs(filtered_dir)
+
+            # Формируем имя файла
+            temp_parts = []
+            if self.temp_filter.text():
+                temp_parts.append(f"day{self.temp_filter.text()}")
+            if self.temp_filter_evening.text():
+                temp_parts.append(f"evening{self.temp_filter_evening.text()}")
+        
+            base_name = os.path.splitext(os.path.basename(self.current_file))[0] if self.current_file else "data"
+            temp_suffix = '_'.join(temp_parts)
+            output_file = os.path.join(filtered_dir, f"{base_name}_temp_{temp_suffix}.csv")
+
+            # Сохраняем отфильтрованные данные
+            save_df = filtered_df.copy()
+            date_col = 'date' if 'date' in save_df.columns else 'дата'
+            if not isinstance(save_df[date_col].iloc[0], str):
+                save_df[date_col] = save_df[date_col].astype(str)
+            save_df.to_csv(output_file, index=False)
+
+            QMessageBox.information(
+                self,
+                "Фильтрация по температуре",
+                f"Отфильтрованные данные сохранены в:\n{output_file}"
+            )
 
         # Обновляем отображение
         self.data_preview.load_data(filtered_df)

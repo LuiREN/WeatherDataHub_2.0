@@ -26,6 +26,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="annotation.py" />
+    <Compile Include="create_shortcut.py" />
     <Compile Include="data_analysis.py">
       <SubType>Code</SubType>
     </Compile>
@@ -36,6 +37,9 @@
     <Compile Include="optimized_table.py" />
     <Compile Include="scraper.py" />
     <Compile Include="split_csv.py" />
+    <Compile Include="styles.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tests\test_data_analysis.py">
       <SubType>Code</SubType>
     </Compile>

@@ -17,6 +17,7 @@ from optimized_table import OptimizedTableWidget
 from annotation import create_annotation_file, read_annotation_file
 from date_widget import DateDataWidget
 from data_analysis import DataAnalysisTab
+from styles import get_styles
 
 
 
@@ -132,9 +133,25 @@ class MainWindow(QMainWindow):
         return button
 
     def load_styles(self) -> None:
-        """Загружает стили из файла QSS."""
-        with open('styles.qss', 'r') as f:
-            self.setStyleSheet(f.read())
+        """Загружает стили."""
+        try:
+            style_content = get_styles()
+            self.setStyleSheet(style_content)
+        except Exception as e:
+            print(f"Error loading styles: {str(e)}")
+            # Применяем базовые стили при ошибке
+            self.setStyleSheet("""
+                QMainWindow {
+                    background-color: #ffffff;
+                }
+                QPushButton {
+                    background-color: #8A2BE2;
+                    color: white;
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 10px;
+                }
+            """)
 
     def select_file(self) -> None:
         """Открывает диалоговое окно для выбора CSV файла."""
